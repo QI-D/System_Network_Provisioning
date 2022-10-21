@@ -1,0 +1,63 @@
+---
+# tasks file for database
+
+- name: run the equivalent of apt-get update before the operation
+  become: true
+  apt:
+    update_cache: yes
+
+- name: installing softwares for database
+  become: true
+  apt:
+    name: 
+      - mysql-server
+      - mysql-client
+      - python3-pip
+      - libmysqlclient-dev
+
+- name: start mysql service
+  become: true
+  service: 
+    name: mysql
+    state: started
+
+- name: Install mysqlclient
+  pip:
+    name: mysqlclient
+  become: true
+
+- name: create backend database on localhost
+  mysql_db:
+    login_host: "{{ db_host }}"
+    name: "{{ db_name }}"
+  become: true
+  when: db_host == "localhost"
+
+- name: create backend database on rds
+  mysql_db:
+    login_user: "{{ db_username }}"
+    login_password: "{{ db_password }}"
+    login_host: "{{ db_host }}"
+    name: "{{ db_name }}"
+  become: true
+  when: db_host != "localhost"
+
+- name: create mysql user on localhost
+  mysql_user:
+    login_host: "{{ db_host }}"
+    name: "{{ db_username }}"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:ALL"
+  become: true
+  when: db_host == "localhost"
+
+- name: create mysql user on rds
+  mysql_user:
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_username }}"
+    login_password: "{{ db_password }}"
+    name: "{{ db_username }}"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:ALL"
+  become: true
+  when: db_host != "localhost"

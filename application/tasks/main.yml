@@ -1,0 +1,133 @@
+---
+# tasks file for application
+
+- name: installing software for backend
+  become: true
+  apt:
+    name: 
+      - nginx
+      - unzip
+      - acl
+
+- name: adding backend user
+  become: true
+  user:
+    name: backend
+    createhome: yes
+    home: /backend
+
+- name: download the app code
+  get_url:
+    url: https://github.com/timoguic/acit4640-py-mysql/archive/refs/heads/master.zip
+    dest: /tmp/source.zip
+
+- name: create tmp directory for source code
+  file:
+    path: /tmp/code
+    state: directory
+
+- name: unzip the code archive
+  unarchive:
+    src: /tmp/source.zip
+    dest: /tmp/code
+    remote_src: yes
+
+- name: create a directory for frontend files
+  become: true
+  file:
+    path: /frontend
+    state: directory
+    owner: "{{ ansible_ssh_user }}"
+
+- name: setup frontend files
+  copy:
+    src: /tmp/code/acit4640-py-mysql-master/frontend/index.html
+    dest: /frontend/index.html
+    remote_src: yes
+
+- name: copy nginx.conf to instance
+  become: true
+  copy:
+    src: nginx-default
+    dest: /etc/nginx/sites-available/default
+  register: nginx_setup
+
+- name: restart nginx
+  become: true
+  systemd:
+    name: nginx
+    state: restarted
+  when: nginx_setup.changed
+
+- name: setup backend files
+  become: true
+  copy:
+    src: /tmp/code/acit4640-py-mysql-master/backend/
+    dest: /backend/src
+    owner: backend
+    remote_src: yes
+
+- name: template backend.conf to remote
+  become: true
+  template:
+    src: backend.conf
+    dest: /backend/src/
+  register: backend_conf
+
+- name: install python requirements as backend user
+  become: true
+  become_user: backend
+  pip:
+    requirements: /backend/src/requirements.txt
+
+- name: copy backend.service file to instance
+  become: true
+  copy: 
+    src: backend.service
+    dest: /etc/systemd/system
+
+- name: reload systemd
+  become: true
+  systemd:
+    daemon_reload: yes
+
+- name: restart backend service
+  become: true
+  systemd:
+    name: backend
+    state: restarted
+  when: backend_conf.changed
+
+- name: enable backend service
+  become: true
+  service:
+    name: backend
+    enabled: yes
+    state: started
+
+- name: query the database
+  mysql_query:
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_username }}"
+    login_password: "{{ db_password }}"
+    login_db: "{{ db_name }}"
+    query: SELECT bcit_id FROM {{ db_name }}.item WHERE name = %s
+    positional_args:
+      - "{{ student_name }}"
+  register: mysql_query_data
+
+- name: print out the number of rows of the 1st query
+  debug:
+    msg: "{{ mysql_query_data.rowcount[0] }} rows found"
+
+- name: insert into DB
+  mysql_query:
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_username }}"
+    login_password: "{{ db_password }}"
+    login_db: "{{ db_name }}"
+    query: INSERT INTO {{ db_name }}.item (name, bcit_id) VALUES (%s, %s)
+    positional_args:
+      - "{{ student_name }}"
+      - "{{ student_id }}"
+  when: mysql_query_data.rowcount[0] == 0
