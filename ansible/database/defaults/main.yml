@@ -1,7 +1,0 @@
----
-# defaults file for application
-
-db_host: localhost
-db_name: backend
-db_username: db_user
-db_password: SecuRe_pwd1

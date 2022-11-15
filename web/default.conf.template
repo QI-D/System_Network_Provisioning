@@ -1,0 +1,8 @@
+server {
+    server_name localhost;
+    root /usr/share/nginx/html;
+
+    location /json {
+        proxy_pass ${BACKEND_URL};
+    }
+}

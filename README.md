@@ -1,14 +1,17 @@
-# Terraform + Ansible Project for ACIT4640 - System/Network Provisioning
+# Docker Project for ACIT4640 - System/Network Provisioning
 
-Provision an AWS EC2 instance to run a Flask app with another EC2 instance running MySQL.
+Provision a Flask app using Docker and Docker Compose.
 
-Terraform creates the infrastructure including:
+Docker Compose file contains 3 services:
 
-- VPC
-- Subnets
-- Internet Gateway
-- Route Table
-- Security Groups
-- EC2 Instances
-
-Ansible provision 2 EC2 instances based on whether if it is for running the app, or running the database. This was implemented by giving the EC2 instances tags, then assign EC2 instances into different groups based on the tags in ansible.
+- db (MySQL Database)
+  - Database, User, Password defined in variables.env
+- web (Frontend + Nginx)
+  - Depends on database service
+  - Download frontend files from repo
+  - Configure Nginx
+- app (Backend)
+  - Depends on database service
+  - Dowload backend files from repo
+  - Start the app by running Gunicorn
+  - Send initial data once gunicorn is running
