@@ -1,13 +1,27 @@
 ---
 # tasks file for application
 
+- name: run the equivalent of apt-get update before the operation
+  become: true
+  apt:
+    update_cache: yes
+
 - name: installing software for backend
   become: true
   apt:
-    name:
+    name: 
       - nginx
       - unzip
       - acl
+      - mysql-server
+      - mysql-client
+      - python3-pip
+      - libmysqlclient-dev
+
+- name: Install mysqlclient
+  pip:
+    name: mysqlclient
+  become: true
 
 - name: adding backend user
   become: true
@@ -83,7 +97,7 @@
 
 - name: copy backend.service file to instance
   become: true
-  copy:
+  copy: 
     src: backend.service
     dest: /etc/systemd/system
 

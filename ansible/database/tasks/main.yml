@@ -9,7 +9,7 @@
 - name: installing softwares for database
   become: true
   apt:
-    name: 
+    name:
       - mysql-server
       - mysql-client
       - python3-pip
@@ -26,6 +26,20 @@
     name: mysqlclient
   become: true
 
+- name: copy mysqld.cnf to instance
+  become: true
+  copy:
+    src: mysqld.cnf
+    dest: /etc/mysql/mysql.conf.d/mysqld.cnf
+  register: mysql_setup
+
+- name: restart mysql
+  become: true
+  systemd:
+    name: mysql
+    state: restarted
+  when: mysql_setup.changed
+
 - name: create backend database on localhost
   mysql_db:
     login_host: "{{ db_host }}"
@@ -33,17 +47,15 @@
   become: true
   when: db_host == "localhost"
 
-- name: create backend database on rds
+- name: create backend database when not on localhost
   mysql_db:
-    login_user: "{{ db_username }}"
-    login_password: "{{ db_password }}"
-    login_host: "{{ db_host }}"
     name: "{{ db_name }}"
   become: true
   when: db_host != "localhost"
 
 - name: create mysql user on localhost
   mysql_user:
+    host: "%"
     login_host: "{{ db_host }}"
     name: "{{ db_username }}"
     password: "{{ db_password }}"
@@ -51,11 +63,9 @@
   become: true
   when: db_host == "localhost"
 
-- name: create mysql user on rds
+- name: create mysql user when not on localhost
   mysql_user:
-    login_host: "{{ db_host }}"
-    login_user: "{{ db_username }}"
-    login_password: "{{ db_password }}"
+    host: "%"
     name: "{{ db_username }}"
     password: "{{ db_password }}"
     priv: "{{ db_name }}.*:ALL"

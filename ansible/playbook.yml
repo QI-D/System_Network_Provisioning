@@ -10,6 +10,7 @@
       tags:
         - info
         - provision
+        - test
 
     - name: print out URL to the application
       debug: { msg: "http://{{ ec2_info.instances.0.public_ip_address }}" }
@@ -25,7 +26,7 @@
 
     - name: get info about RDS instance
       community.aws.rds_instance_info:
-        db_instance_identifier: ansible-db
+        db_instance_identifier: app-db
       register: aws_rds_info
       tags:
         - rds
@@ -40,24 +41,29 @@
   tasks:
     - name: define db_host variable
       set_fact:
-        db_host: "{{ hostvars.localhost.aws_rds_info.instances.0.endpoint.address }}"
+        db_host: "{{ hostvars[groups._DB.0].private_ip_address }}"
       tags:
         - provision
-      when: setup_local_db == false
+        - test
+      when:
+        - setup_local_db == true
+
+    - debug: { var: db_host }
+      tags:
+        - test
 
     - name: include role database
-      import_role: 
+      import_role:
         name: database
       tags:
         - provision
+      when:
+        - inventory_hostname in groups["_DB"]
 
     - name: include role application
       import_role:
         name: application
       tags:
         - provision
-
-  vars:
-    setup_local_db: false
-    student_name: qid
-    student_id: A01207763
+      when:
+        - inventory_hostname in groups["_APP"]
