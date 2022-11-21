@@ -1,5 +1,9 @@
 #!/bin/bash
 
+ls -l backend.conf
+
+rm backend.conf
+
 echo "[database]
 MYSQL_HOST = ${MYSQL_HOST}
 MYSQL_PORT = 3306
